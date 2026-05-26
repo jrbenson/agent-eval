@@ -1,0 +1,18 @@
+/* Global styles — Chakra UI handles component styling */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	overflow: hidden;
+}
+
+#root {
+	height: 100%;
+}
