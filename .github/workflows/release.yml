@@ -7,30 +7,15 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: macos-14
-            targets: macos-arm64
-          - os: windows-latest
-            targets: win-x64
-    runs-on: ${{ matrix.os }}
+  build-macos:
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install
-      - run: bun run build:vite
-      - run: bunx electrobun build --env stable --targets ${{ matrix.targets }}
-      - name: List workspace after build
-        shell: bash
-        run: |
-          echo "=== artifacts/ ==="
-          ls -la artifacts/ 2>/dev/null || echo "(not found)"
-          echo "=== build/ ==="
-          ls -la build/ 2>/dev/null || echo "(not found)"
-          echo "=== find distributable files ==="
-          find . -path ./node_modules -prune -o \( -name "*.dmg" -o -name "*.tar.zst" -o -name "update.json" -o -name "*.exe" -o -name "*.msi" \) -print
+      - run: bun run build
+      - name: List artifacts
+        run: ls -la artifacts/ 2>/dev/null || echo "No artifacts directory"
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
         with:
