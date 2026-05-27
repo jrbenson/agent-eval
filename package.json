@@ -13,6 +13,7 @@
 		"dev:electrobun": "electrobun dev --watch",
 		"dev:hmr": "vite --port 5173",
 		"build": "vite build && electrobun build --env=stable",
+		"build:vite": "vite build",
 		"build:canary": "vite build && electrobun build --env=canary",
 		"test": "bun test",
 		"test:watch": "bun test --watch",

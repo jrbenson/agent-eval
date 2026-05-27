@@ -2,17 +2,36 @@ name: Release
 on:
   push:
     tags: ["v*"]
+permissions:
+  contents: write
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
-  build-macos:
-    runs-on: macos-14
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            targets: macos-arm64,macos-x64
+            artifacts: |
+              artifacts/stable-macos-arm64-AgentEval.dmg
+              artifacts/stable-macos-arm64-AgentEval.app.tar.zst
+              artifacts/stable-macos-arm64-update.json
+              artifacts/stable-macos-x64-AgentEval.dmg
+              artifacts/stable-macos-x64-AgentEval.app.tar.zst
+              artifacts/stable-macos-x64-update.json
+          - os: windows-latest
+            targets: win-x64
+            artifacts: |
+              artifacts/stable-win-x64-AgentEval.exe
+              artifacts/stable-win-x64-update.json
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install
-      - run: bun run build
+      - run: bun run build:vite
+      - run: bunx electrobun build --env stable --targets ${{ matrix.targets }}
       - uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/stable-macos-arm64-AgentEval.dmg
-            artifacts/stable-macos-arm64-AgentEval.app.tar.zst
-            artifacts/stable-macos-arm64-update.json
+          files: ${{ matrix.artifacts }}
