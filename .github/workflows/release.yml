@@ -12,19 +12,9 @@ jobs:
       matrix:
         include:
           - os: macos-14
-            targets: macos-arm64,macos-x64
-            artifacts: |
-              artifacts/stable-macos-arm64-AgentEval.dmg
-              artifacts/stable-macos-arm64-AgentEval.app.tar.zst
-              artifacts/stable-macos-arm64-update.json
-              artifacts/stable-macos-x64-AgentEval.dmg
-              artifacts/stable-macos-x64-AgentEval.app.tar.zst
-              artifacts/stable-macos-x64-update.json
+            targets: macos-arm64
           - os: windows-latest
             targets: win-x64
-            artifacts: |
-              artifacts/stable-win-x64-AgentEval.exe
-              artifacts/stable-win-x64-update.json
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +22,17 @@ jobs:
       - run: bun install
       - run: bun run build:vite
       - run: bunx electrobun build --env stable --targets ${{ matrix.targets }}
-      - uses: softprops/action-gh-release@v2
+      - name: List workspace after build
+        shell: bash
+        run: |
+          echo "=== artifacts/ ==="
+          ls -la artifacts/ 2>/dev/null || echo "(not found)"
+          echo "=== build/ ==="
+          ls -la build/ 2>/dev/null || echo "(not found)"
+          echo "=== find distributable files ==="
+          find . -path ./node_modules -prune -o \( -name "*.dmg" -o -name "*.tar.zst" -o -name "update.json" -o -name "*.exe" -o -name "*.msi" \) -print
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.artifacts }}
+          files: |
+            artifacts/*
