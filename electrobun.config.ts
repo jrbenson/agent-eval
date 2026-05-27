@@ -1,31 +1,31 @@
-import type { ElectrobunConfig } from "electrobun";
-import pkg from "./package.json";
+import type { ElectrobunConfig } from 'electrobun'
+import pkg from './package.json'
 
 export default {
-  app: {
-    name: "Agent Eval",
-    identifier: "app.agenteval",
-    version: pkg.version,
-  },
-  release: {
-    baseUrl: "https://github.com/jrbenson/agent-eval/releases/latest/download",
-  },
-  build: {
-    // Vite builds to dist/, we copy from there
-    copy: {
-      "dist/index.html": "views/mainview/index.html",
-      "dist/assets": "views/mainview/assets",
-    },
-    // Ignore Vite output in watch mode — HMR handles view rebuilds separately
-    watchIgnore: ["dist/**"],
-    mac: {
-      bundleCEF: false,
-    },
-    linux: {
-      bundleCEF: false,
-    },
-    win: {
-      bundleCEF: false,
-    },
-  },
-} satisfies ElectrobunConfig;
+	app: {
+		name: 'Agent Eval',
+		identifier: 'app.agenteval',
+		version: pkg.version,
+	},
+	release: {
+		baseUrl: 'https://github.com/jrbenson/agent-eval/releases/latest/download',
+	},
+	build: {
+		// Vite builds to dist/, we copy from there
+		copy: {
+			'dist/index.html': 'views/mainview/index.html',
+			'dist/assets': 'views/mainview/assets',
+		},
+		// Ignore Vite output in watch mode — HMR handles view rebuilds separately
+		watchIgnore: ['dist/**'],
+		mac: {
+			bundleCEF: false,
+		},
+		linux: {
+			bundleCEF: false,
+		},
+		win: {
+			bundleCEF: false,
+		},
+	},
+} satisfies ElectrobunConfig
