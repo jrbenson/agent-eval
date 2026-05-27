@@ -1,40 +1,40 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
-  "organizeImports": {
-    "enabled": true
-  },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "tab",
-    "lineWidth": 100
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "correctness": {
-        "noUnusedImports": "warn",
-        "noUnusedVariables": "warn",
-        "useExhaustiveDependencies": "warn"
-      },
-      "suspicious": {
-        "noArrayIndexKey": "off",
-        "noExplicitAny": "warn",
-        "noImplicitAnyLet": "warn",
-        "noAssignInExpressions": "off"
-      },
-      "style": {
-        "noNonNullAssertion": "off"
-      }
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "single",
-      "semicolons": "asNeeded"
-    }
-  },
-  "files": {
-    "ignore": ["node_modules", "dist", "build", ".git"]
-  }
+	"$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
+	"organizeImports": {
+		"enabled": true
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 100
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"correctness": {
+				"noUnusedImports": "warn",
+				"noUnusedVariables": "warn",
+				"useExhaustiveDependencies": "warn"
+			},
+			"suspicious": {
+				"noArrayIndexKey": "off",
+				"noExplicitAny": "warn",
+				"noImplicitAnyLet": "warn",
+				"noAssignInExpressions": "off"
+			},
+			"style": {
+				"noNonNullAssertion": "off"
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single",
+			"semicolons": "asNeeded"
+		}
+	},
+	"files": {
+		"ignore": ["node_modules", "dist", "build", ".git"]
+	}
 }

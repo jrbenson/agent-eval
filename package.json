@@ -19,7 +19,10 @@
     "test:functional": "bun test src/testing/functional",
     "check": "biome check --write .",
     "lint": "biome lint .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "release": "bun run check && bun run test && npm version patch && git push && git push --tags",
+    "release:minor": "bun run check && bun run test && npm version minor && git push && git push --tags",
+    "release:major": "bun run check && bun run test && npm version major && git push && git push --tags"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.68",

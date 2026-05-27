@@ -45,9 +45,15 @@ Key decisions and non-obvious changes for agent context. Architecture details ar
 - [x] Trial matrix: multi-select, highlighting, bulk ops.
 - [x] Matrix bulk: apply-to-others, expand, templates, import.
 
+- [x] Phase 1 publish: license, metadata, lint cleanup.
+- [x] Phase 2 CI/CD: GitHub Actions lint/test + release workflows.
+- [x] Electrobun updater: release.baseUrl configured for GitHub Releases.
+
 ## Open
 
 - [ ] View-time analysis for scoring and attribution.
+- [ ] Code signing (macOS notarization, Windows Authenticode).
+- [ ] Multi-platform builds (x64, linux, windows).
 - [ ] Resume interrupted runs after restart.
 - [ ] RunDetail consumes view-time analysis.
 - [ ] Runtime validation in electrobun dev.
