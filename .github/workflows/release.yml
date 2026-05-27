@@ -14,10 +14,16 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       - run: bun run build
-      - name: List artifacts
-        run: ls -la artifacts/ 2>/dev/null || echo "No artifacts directory"
-      - name: Upload release artifacts
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/*
+          files: artifacts/*
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run build
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
