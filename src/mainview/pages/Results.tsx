@@ -1,6 +1,6 @@
-import { Badge, Table } from '@chakra-ui/react'
+import { Badge, Box, HStack, IconButton, Table, Tag } from '@chakra-ui/react'
 import { useMemo, useState } from 'react'
-import { FiBarChart2 } from 'react-icons/fi'
+import { FiBarChart2, FiStar } from 'react-icons/fi'
 import type { StoredRunRecord } from '../../shared/rpc-types'
 import ClickableRow from '../components/ClickableRow'
 import CollectionPageSection from '../components/CollectionPageSection'
@@ -8,7 +8,7 @@ import ListPageLayout from '../components/ListPageLayout'
 import { RowPopoutButton } from '../components/PopoutButton'
 import RunStatusBadge from '../components/RunStatusBadge'
 import { type SortOption, useListFilter } from '../hooks/use-list-filter'
-import { useEvaluations, useRuns } from '../hooks/use-results'
+import { useEvaluations, useRuns, useUpdateRun } from '../hooks/use-results'
 import { RunDetail } from './RunDetail'
 
 const runSorts: SortOption<StoredRunRecord>[] = [
@@ -27,6 +27,11 @@ const runSorts: SortOption<StoredRunRecord>[] = [
 		value: 'status',
 		fn: (a, b) => a.status.localeCompare(b.status),
 	},
+	{
+		label: 'Favorites',
+		value: 'favorites',
+		fn: (a, b) => Number(b.favorite) - Number(a.favorite),
+	},
 ]
 
 // ---- Views ----
@@ -41,6 +46,7 @@ export default function ResultsPage({ initialRunId }: { initialRunId?: string } 
 	)
 	const { data: runsData, isLoading } = useRuns()
 	const { data: evaluationsData } = useEvaluations()
+	const updateRun = useUpdateRun()
 
 	const runs = runsData ?? []
 	const evaluations = evaluationsData ?? []
@@ -98,6 +104,26 @@ export default function ResultsPage({ initialRunId }: { initialRunId?: string } 
 					return (
 						<ClickableRow key={run.id} onClick={() => setView({ type: 'view-run', runId: run.id })}>
 							<Table.Cell width="1" whiteSpace="nowrap">
+								<IconButton
+									aria-label="Toggle favorite"
+									variant="ghost"
+									size="xs"
+									onClick={(e) => {
+										e.stopPropagation()
+										updateRun.mutate({
+											runId: run.id,
+											favorite: !run.favorite,
+										})
+									}}
+								>
+									<Box
+										as={FiStar}
+										fill={run.favorite ? 'currentColor' : 'none'}
+										color={run.favorite ? 'yellow.400' : undefined}
+									/>
+								</IconButton>
+							</Table.Cell>
+							<Table.Cell width="1" whiteSpace="nowrap">
 								<Badge variant="subtle" colorPalette="gray">
 									{run.scenario.type === 'survey' ? 'Survey' : 'Task'}
 								</Badge>
@@ -108,6 +134,15 @@ export default function ResultsPage({ initialRunId }: { initialRunId?: string } 
 							</Table.Cell>
 							<Table.Cell width="1" whiteSpace="nowrap" color="fg.muted" fontSize="sm">
 								{run.completedTrials}/{run.totalTrials} trials
+							</Table.Cell>
+							<Table.Cell>
+								<HStack gap={1} flexWrap="wrap">
+									{run.tags.map((t) => (
+										<Tag.Root key={t} size="sm">
+											<Tag.Label>{t}</Tag.Label>
+										</Tag.Root>
+									))}
+								</HStack>
 							</Table.Cell>
 							<Table.Cell
 								width="1"

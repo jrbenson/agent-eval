@@ -41,16 +41,16 @@ function formatQuestionPrompt(q: SurveyQuestion): string {
 	switch (q.responseFormat) {
 		case 'likert':
 			prompt +=
-				'\n\nPlease respond using a Likert scale: 1 (Strongly Disagree), 2 (Disagree), 3 (Neutral), 4 (Agree), 5 (Strongly Agree).'
+				'\n\nRespond with a number from 1–5 on the Likert scale. You may add a brief explanation after a | character.\n\nScale:\n1 – Strongly Disagree\n2 – Disagree\n3 – Neutral\n4 – Agree\n5 – Strongly Agree\n\nFormat:\n[1-5] | [explanation]'
 			break
 		case 'multiple_choice':
 			if (q.options && q.options.length > 0) {
-				prompt += `\n\nPlease choose one of the following options:\n${q.options.map((o, i) => `${i + 1}. ${o}`).join('\n')}`
+				prompt += `\n\nChoose one of the following options. Respond with the option number. You may add a brief explanation after a | character.\n\nFormat:\n[option #] | [explanation]\n\nOptions:\n${q.options.map((o, i) => `${i + 1}. ${o}`).join('\n')}`
 			}
 			break
 		case 'ranking':
 			if (q.options && q.options.length > 0) {
-				prompt += `\n\nPlease rank the following items from most to least preferred:\n${q.options.map((o, i) => `${i + 1}. ${o}`).join('\n')}`
+				prompt += `\n\nRank these items from most to least preferred. Respond with a numbered list, one item per line. You may add a brief explanation after a | character.\n\nFormat:\n1. [option] | [explanation]\n2. [option] | [explanation]\n\nItems to rank:\n${q.options.map((o) => `- ${o}`).join('\n')}`
 			}
 			break
 		case 'free_text':

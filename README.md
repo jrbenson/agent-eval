@@ -1,33 +1,63 @@
 # Agent Eval
 
-Desktop application for evaluating AI agents using UX research methods (surveys and task scenarios). Built with Electrobun, React, Chakra UI, and Vite.
+Desktop application for evaluating AI agents using UX research methods (surveys and task scenarios).
 
-## Getting Started
+## Install
+
+### macOS (Apple Silicon)
+
+[Download DMG](https://github.com/jrbenson/agent-eval/releases/latest/download/stable-macos-arm64-AgentEval.dmg)
+
+The app is currently unsigned. After mounting the DMG and dragging to Applications (or elsewhere), remove the quarantine attribute before first launch:
 
 ```bash
-# Install dependencies
-bun install
-
-# Development (Vite HMR + Electrobun with watch)
-bun run dev
-
-# Production build (stable)
-bun run build
-
-# Canary build
-bun run build:canary
+xattr -c /Applications/Agent\ Eval.app
 ```
 
-## How Development Works
+### Windows (x64)
+
+[Download Installer](https://github.com/jrbenson/agent-eval/releases/latest/download/stable-win-x64-AgentEval-Setup.zip)
+
+The app is currently unsigned. Windows SmartScreen will block the installer. Click **More info** then **Run anyway** to proceed.
+
+> **Note:** Windows has known unresolved issues (Edit menu not hidden, popup windows may not work).
+
+## Updates
+
+The app checks for updates on launch via Electrobun's built-in updater. When a new version is available, it downloads a patch and applies it on next restart.
+
+## Development
+
+### Quick Start
+
+Requires Bun. [Install](https://bun.com/docs/installation#installation) if needed.
+
+```bash
+npm install -g bun
+```
+
+Clone the repo, install dependencies, and start the dev server:
+
+```bash
+git clone https://github.com/jrbenson/agent-eval.git && cd agent-eval
+```
+
+```bash
+bun install
+```
+
+```bash
+bun dev
+```
+
+### How Dev Build Works
 
 `bun run dev` runs two processes concurrently:
 
-1. **Vite dev server** on `http://localhost:5173` — provides HMR for React/webview code
-2. **Electrobun dev** with `--watch` — auto-rebuilds when bun-side code changes
+1. **Vite Dev Server** `http://localhost:5173` <br/> Directs to Vite server instead of bundled assets to get HMR.
+2. **Electrobun Watch** <br /> Restarts entire app on bun-side changes.
 
-Electrobun detects the running Vite server and loads the webview from it instead of bundled assets, so both sides update on changes.
-
-## Project Structure
+### Project Structure
 
 ```
 ├── src/
@@ -51,17 +81,18 @@ Electrobun detects the running Vite server and loads the webview from it instead
 └── package.json
 ```
 
-## Data Storage
+### Data Storage
 
 All data is stored as JSON files on disk under the platform-specific user data directory. For example:
 
 - **macOS dev**: `~/Library/Application Support/app.agenteval/dev/`
 - **macOS stable**: `~/Library/Application Support/app.agenteval/stable/`
 
-Directory structure:
+Data directory structure:
+
 ```
 ├── evaluations/          # Evaluation configs
-├── results/              # Run results (JSONL per run)
+├── results/              # Run results
 ├── scenarios/
 │   ├── surveys/          # Survey definitions
 │   └── tasks/            # Task definitions
@@ -73,18 +104,18 @@ Directory structure:
 │   ├── content-sets/     # Content sets
 │   ├── skills/           # Skill definitions
 │   └── skill-sets/       # Skill sets
-├── providers.json        # Provider API keys
 └── settings.json         # App settings
 ```
 
-No database is used — entities are individual JSON files, runs are stored as JSONL (one entry per trial).
+### API Keys
 
-## Tech Stack
+Provider API keys are stored using the OS native secrets manager via `Bun.secrets` (macOS Keychain, Windows Credential Manager). Keys are never written to disk or config files. The app stores them under the service name `app.agenteval` and retrieves them at runtime when making LLM calls.
 
-- **Runtime**: [Electrobun](https://blackboard.sh/electrobun/) (NOT Electron)
-- **Backend**: Bun (TypeScript)
-- **Frontend**: React + Chakra UI v3 + Vite
-- **AI**: Vercel AI SDK
-- **Charts**: Apache ECharts (via echarts-for-react)
-- **Tests**: Bun test runner
+### Tech Stack
 
+- **Runtime**: [Electrobun](https://blackboard.sh/electrobun/)
+- **Backend**: [Bun](https://bun.sh/) ([TypeScript](https://www.typescriptlang.org/))
+- **Frontend**: [React](https://react.dev/) + [Chakra UI v3](https://www.chakra-ui.com/) + [Vite](https://vite.dev/)
+- **AI**: [Vercel AI SDK](https://sdk.vercel.ai/)
+- **Charts**: [Apache ECharts](https://echarts.apache.org/) (via [echarts-for-react](https://github.com/hustcc/echarts-for-react))
+- **Tests**: [Bun test runner](https://bun.sh/docs/cli/test)

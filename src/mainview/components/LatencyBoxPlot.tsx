@@ -8,7 +8,7 @@ import {
 	chartAxisStyle,
 	chartBaseOptions,
 	useChartColors,
-} from '../utils/chart-theme'
+} from '../utils/charts/theme'
 
 function quartiles(values: number[]) {
 	const sorted = [...values].sort((a, b) => a - b)
@@ -44,7 +44,12 @@ function buildOption(
 
 	if (groups.size === 0) return { option: {} as EChartsOption, hasData: false, categoryCount: 0 }
 
-	const categories = [...groups.keys()]
+	// Sort categories by median latency (shortest first)
+	const categories = [...groups.keys()].sort((a, b) => {
+		const medA = quartiles(groups.get(a)!).median
+		const medB = quartiles(groups.get(b)!).median
+		return medA - medB
+	})
 	const boxData: number[][] = []
 	const scatterData: [number, number][] = []
 
@@ -158,7 +163,7 @@ export default function LatencyBoxPlot({
 
 	if (!hasData) return null
 
-	const chartHeight = Math.max(120, categoryCount * 60 + 40)
+	const chartHeight = Math.max(120, categoryCount * 25 + 40)
 
 	return (
 		<Card.Root size="sm">

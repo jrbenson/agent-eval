@@ -33,6 +33,7 @@ import {
 	getTrialSummaries,
 	listAllTrialSummaries,
 	listRuns,
+	updateRunMetadata,
 } from '../data/runs'
 import {
 	deleteAgentConfig,
@@ -449,6 +450,8 @@ export function createRpc() {
 
 				listRuns: ({ evaluationId }) => listRuns(evaluationId),
 				getRun: ({ runId }) => getRun(runId),
+				updateRun: ({ runId, ...rest }) =>
+					mutUpdate('result', runId, () => updateRunMetadata(runId, rest)),
 				getRunResults: ({ runId }) => getTrialSummaries(runId),
 				getRunResult: ({ id }) => findTrialSummary(id),
 				getTrialData: ({ runId, trialId }) => getTrial(runId, trialId),

@@ -3,7 +3,7 @@ import type { EChartsOption } from 'echarts'
 import ReactECharts from 'echarts-for-react'
 import { useMemo } from 'react'
 import type { VariantAnalysisResult } from '../../shared/rpc-types'
-import { chartBaseOptions, useChartColors } from '../utils/chart-theme'
+import { chartBaseOptions, useChartColors } from '../utils/charts/theme'
 
 function buildComparisonOption(
 	variants: VariantAnalysisResult[],

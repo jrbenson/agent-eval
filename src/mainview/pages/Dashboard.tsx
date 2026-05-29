@@ -1,18 +1,21 @@
 import {
 	Badge,
+	Box,
 	Button,
 	Card,
 	HStack,
 	Heading,
+	IconButton,
 	SimpleGrid,
 	Table,
 	Text,
 	VStack,
 } from '@chakra-ui/react'
+import { FiStar } from 'react-icons/fi'
 import ClickableRow from '../components/ClickableRow'
 import ListPageLayout from '../components/ListPageLayout'
 import RunStatusBadge from '../components/RunStatusBadge'
-import { useDashboardStats } from '../hooks/use-results'
+import { useDashboardStats, useUpdateRun } from '../hooks/use-results'
 import { useEvaluations } from '../hooks/use-results'
 
 interface DashboardProps {
@@ -22,9 +25,11 @@ interface DashboardProps {
 export default function DashboardPage({ onNavigate }: DashboardProps) {
 	const { data: stats } = useDashboardStats()
 	const { data: evaluationsData } = useEvaluations()
+	const updateRun = useUpdateRun()
 
 	const resultCount = stats?.resultCount ?? 0
 	const recentRuns = stats?.recentRuns ?? []
+	const favoriteRuns = stats?.favoriteRuns ?? []
 	const evaluations = evaluationsData ?? []
 	const evaluationNameMap = new Map(evaluations.map((e) => [e.id, e.label]))
 
@@ -140,7 +145,7 @@ export default function DashboardPage({ onNavigate }: DashboardProps) {
 				<Card.Root>
 					<Card.Header>
 						<HStack justify="space-between">
-							<Heading size="sm">Recent Results</Heading>
+							<Heading size="sm">Results</Heading>
 							{resultCount > 0 && (
 								<Button size="xs" variant="ghost" onClick={() => onNavigate('results')}>
 									View All ({resultCount})
@@ -149,49 +154,140 @@ export default function DashboardPage({ onNavigate }: DashboardProps) {
 						</HStack>
 					</Card.Header>
 					<Card.Body>
-						{recentRuns.length === 0 ? (
+						{favoriteRuns.length === 0 && recentRuns.length === 0 ? (
 							<Text color="fg.muted" fontSize="sm">
 								No evaluation runs yet. Create a scenario and run an evaluation to get started.
 							</Text>
 						) : (
-							<Table.ScrollArea>
-								<Table.Root size="sm">
-									<Table.Body>
-										{recentRuns.map((run) => {
-											const evalName =
-												evaluationNameMap.get(run.sourceEvaluationId) ?? 'Unknown Evaluation'
-											return (
-												<ClickableRow
-													key={run.id}
-													onClick={() => onNavigate('results', { runId: run.id })}
-												>
-													<Table.Cell width="1" whiteSpace="nowrap">
-														<Badge variant="subtle" colorPalette="gray">
-															{run.scenario.type === 'survey' ? 'Survey' : 'Task'}
-														</Badge>
-													</Table.Cell>
-													<Table.Cell fontWeight="medium">{evalName}</Table.Cell>
-													<Table.Cell width="1" whiteSpace="nowrap">
-														<RunStatusBadge status={run.status} />
-													</Table.Cell>
-													<Table.Cell width="1" whiteSpace="nowrap" color="fg.muted" fontSize="sm">
-														{run.completedTrials}/{run.totalTrials} trials
-													</Table.Cell>
-													<Table.Cell
-														width="1"
-														whiteSpace="nowrap"
-														color="fg.muted"
-														fontSize="xs"
-														textAlign="end"
-													>
-														{new Date(run.createdAt).toLocaleString()}
-													</Table.Cell>
-												</ClickableRow>
-											)
-										})}
-									</Table.Body>
-								</Table.Root>
-							</Table.ScrollArea>
+							<VStack align="stretch" gap={4}>
+								{favoriteRuns.length > 0 && (
+									<VStack align="stretch" gap={1}>
+										<Heading size="xs" color="fg.muted">
+											Favorites
+										</Heading>
+										<Table.ScrollArea>
+											<Table.Root size="sm">
+												<Table.Body>
+													{favoriteRuns.map((run) => {
+														const evalName =
+															evaluationNameMap.get(run.sourceEvaluationId) ?? 'Unknown Evaluation'
+														return (
+															<ClickableRow
+																key={run.id}
+																onClick={() => onNavigate('results', { runId: run.id })}
+															>
+																<Table.Cell width="1" whiteSpace="nowrap">
+																	<IconButton
+																		aria-label="Unfavorite"
+																		variant="ghost"
+																		size="xs"
+																		onClick={(e) => {
+																			e.stopPropagation()
+																			updateRun.mutate({
+																				runId: run.id,
+																				favorite: false,
+																			})
+																		}}
+																	>
+																		<Box as={FiStar} fill="currentColor" color="yellow.400" />
+																	</IconButton>
+																</Table.Cell>
+																<Table.Cell width="1" whiteSpace="nowrap">
+																	<Badge variant="subtle" colorPalette="gray">
+																		{run.scenario.type === 'survey' ? 'Survey' : 'Task'}
+																	</Badge>
+																</Table.Cell>
+																<Table.Cell fontWeight="medium">{evalName}</Table.Cell>
+																<Table.Cell width="1" whiteSpace="nowrap">
+																	<RunStatusBadge status={run.status} />
+																</Table.Cell>
+																<Table.Cell
+																	width="1"
+																	whiteSpace="nowrap"
+																	color="fg.muted"
+																	fontSize="sm"
+																>
+																	{run.completedTrials}/{run.totalTrials} trials
+																</Table.Cell>
+															</ClickableRow>
+														)
+													})}
+												</Table.Body>
+											</Table.Root>
+										</Table.ScrollArea>
+									</VStack>
+								)}
+								{recentRuns.length > 0 && (
+									<VStack align="stretch" gap={1}>
+										<Heading size="xs" color="fg.muted">
+											Recent
+										</Heading>
+										<Table.ScrollArea>
+											<Table.Root size="sm">
+												<Table.Body>
+													{recentRuns.map((run) => {
+														const evalName =
+															evaluationNameMap.get(run.sourceEvaluationId) ?? 'Unknown Evaluation'
+														return (
+															<ClickableRow
+																key={run.id}
+																onClick={() => onNavigate('results', { runId: run.id })}
+															>
+																<Table.Cell width="1" whiteSpace="nowrap">
+																	<IconButton
+																		aria-label="Toggle favorite"
+																		variant="ghost"
+																		size="xs"
+																		onClick={(e) => {
+																			e.stopPropagation()
+																			updateRun.mutate({
+																				runId: run.id,
+																				favorite: !run.favorite,
+																			})
+																		}}
+																	>
+																		<Box
+																			as={FiStar}
+																			fill={run.favorite ? 'currentColor' : 'none'}
+																			color={run.favorite ? 'yellow.400' : undefined}
+																		/>
+																	</IconButton>
+																</Table.Cell>
+																<Table.Cell width="1" whiteSpace="nowrap">
+																	<Badge variant="subtle" colorPalette="gray">
+																		{run.scenario.type === 'survey' ? 'Survey' : 'Task'}
+																	</Badge>
+																</Table.Cell>
+																<Table.Cell fontWeight="medium">{evalName}</Table.Cell>
+																<Table.Cell width="1" whiteSpace="nowrap">
+																	<RunStatusBadge status={run.status} />
+																</Table.Cell>
+																<Table.Cell
+																	width="1"
+																	whiteSpace="nowrap"
+																	color="fg.muted"
+																	fontSize="sm"
+																>
+																	{run.completedTrials}/{run.totalTrials} trials
+																</Table.Cell>
+																<Table.Cell
+																	width="1"
+																	whiteSpace="nowrap"
+																	color="fg.muted"
+																	fontSize="xs"
+																	textAlign="end"
+																>
+																	{new Date(run.createdAt).toLocaleString()}
+																</Table.Cell>
+															</ClickableRow>
+														)
+													})}
+												</Table.Body>
+											</Table.Root>
+										</Table.ScrollArea>
+									</VStack>
+								)}
+							</VStack>
 						)}
 					</Card.Body>
 				</Card.Root>

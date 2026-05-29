@@ -5,6 +5,7 @@ import type {
 	ExtractedAnswer,
 	ExtractionConfidence,
 } from '../../shared/schemas/survey-extraction.schema'
+import { stripFormatting, stripPipeExplanation, stripXmlTags } from '../../shared/text-cleaning'
 
 interface QuestionDef {
 	id: string
@@ -33,14 +34,15 @@ function extractLikert(raw: string): {
 	value: number | null
 	confidence: ExtractionConfidence
 } {
+	const cleaned = stripFormatting(stripPipeExplanation(stripXmlTags(raw).trim()))
 	// 1. Look for isolated digit 1-5
-	const digitMatch = raw.match(/\b([1-5])\b/)
+	const digitMatch = cleaned.match(/\b([1-5])\b/)
 	if (digitMatch) {
 		return { value: Number(digitMatch[1]), confidence: 'exact' }
 	}
 
-	// 2. Keyword matching (case-insensitive)
-	const lower = raw.toLowerCase()
+	// 2. Keyword matching (case-insensitive) on cleaned text
+	const lower = cleaned.toLowerCase()
 	for (const [keyword, value] of LIKERT_KEYWORDS) {
 		if (lower.includes(keyword)) {
 			return { value, confidence: 'inferred' }
@@ -60,10 +62,11 @@ function extractMultipleChoice(
 	index: number | null
 	confidence: ExtractionConfidence
 } {
-	const trimmed = raw.trim()
+	// Clean the response: remove thinking, pipe explanation, and formatting
+	const cleaned = stripFormatting(stripPipeExplanation(stripXmlTags(raw).trim()))
 
-	// 1. Leading number indicating option index
-	const numMatch = trimmed.match(/^\s*(\d+)/)
+	// 1. Leading number indicating option index (preferred)
+	const numMatch = cleaned.match(/^\s*(\d+)/)
 	if (numMatch) {
 		const idx = Number(numMatch[1]) - 1 // 1-based in prompt → 0-based
 		if (idx >= 0 && idx < options.length) {
@@ -72,15 +75,15 @@ function extractMultipleChoice(
 	}
 
 	// 2. Exact label match (case-insensitive)
-	const lowerTrimmed = trimmed.toLowerCase()
+	const lowerCleaned = cleaned.toLowerCase()
 	for (let i = 0; i < options.length; i++) {
-		if (lowerTrimmed === options[i].toLowerCase()) {
+		if (lowerCleaned === options[i].toLowerCase()) {
 			return { value: options[i], index: i, confidence: 'exact' }
 		}
 	}
 
 	// 3. Substring match — response contains exactly one option
-	const lowerRaw = raw.toLowerCase()
+	const lowerRaw = cleaned.toLowerCase()
 	const matches: number[] = []
 	for (let i = 0; i < options.length; i++) {
 		if (lowerRaw.includes(options[i].toLowerCase())) {
@@ -97,6 +100,56 @@ function extractMultipleChoice(
 
 // ---- Ranking Extraction ----
 
+/**
+ * Clean a numbered list item using shared utilities.
+ */
+function cleanListItem(text: string): string {
+	return stripFormatting(stripPipeExplanation(text))
+}
+
+/**
+ * Extract numbered list items from text, returning array of cleaned items.
+ * When multiple numbered sequences exist (e.g., reasoning + final list),
+ * prefers the last complete sequence that matches the expected option count.
+ */
+function extractNumberedItems(raw: string, expectedCount: number): string[] {
+	const cleaned = stripXmlTags(raw)
+
+	const linePattern = /^\s*(\d+)[\.\)\:\-]\s*(.+)/gm
+	const sequences: string[][] = []
+	let currentSeq: string[] = []
+	let lastNum = 0
+
+	let match: RegExpExecArray | null
+	while ((match = linePattern.exec(cleaned)) !== null) {
+		const num = Number.parseInt(match[1], 10)
+		const item = cleanListItem(match[2])
+
+		if (num <= lastNum) {
+			// New sequence starting (number reset)
+			if (currentSeq.length > 0) {
+				sequences.push(currentSeq)
+			}
+			currentSeq = [item]
+			lastNum = num
+		} else {
+			currentSeq.push(item)
+			lastNum = num
+		}
+	}
+	if (currentSeq.length > 0) {
+		sequences.push(currentSeq)
+	}
+
+	if (sequences.length === 0) return []
+
+	// Prefer the last sequence that matches expected count; otherwise the longest
+	const exactMatch = [...sequences].reverse().find((s) => s.length === expectedCount)
+	if (exactMatch) return exactMatch
+
+	return sequences.reduce((a, b) => (a.length >= b.length ? a : b))
+}
+
 function extractRanking(
 	raw: string,
 	options: string[],
@@ -106,16 +159,15 @@ function extractRanking(
 	confidence: ExtractionConfidence
 	matchedCount: number
 } {
-	// 1. Parse numbered list items
-	const linePattern = /^\s*(\d+)[\.\)\:\-]\s*(.+)/gm
-	const items: string[] = []
-	let match: RegExpExecArray | null
-	while ((match = linePattern.exec(raw)) !== null) {
-		items.push(match[2].trim())
-	}
+	const items = extractNumberedItems(raw, options.length)
 
 	if (items.length === 0) {
-		return { value: null, indices: null, confidence: 'failed', matchedCount: 0 }
+		return {
+			value: null,
+			indices: null,
+			confidence: 'failed',
+			matchedCount: 0,
+		}
 	}
 
 	// 2. Match extracted items to known options (case-insensitive, trimmed)
@@ -190,7 +242,7 @@ function extractFreeText(raw: string): {
 	value: string
 	confidence: ExtractionConfidence
 } {
-	const trimmed = raw.trim()
+	const trimmed = stripXmlTags(raw).trim()
 	if (!trimmed) {
 		return { value: '', confidence: 'failed' }
 	}
@@ -198,15 +250,15 @@ function extractFreeText(raw: string): {
 	// Split on first pipe character
 	const pipeIdx = trimmed.indexOf('|')
 	if (pipeIdx > 0) {
-		const left = trimmed.slice(0, pipeIdx)
+		const left = stripFormatting(trimmed.slice(0, pipeIdx))
 		const normalized = normalizeFreeTextValue(left)
 		if (normalized) {
 			return { value: normalized, confidence: 'exact' }
 		}
 	}
 
-	// Fallback: use first line, normalized
-	const firstLine = trimmed.split(/\r?\n/)[0]
+	// Fallback: use first line, normalized, with formatting stripped
+	const firstLine = stripFormatting(trimmed.split(/\r?\n/)[0])
 	const normalized = normalizeFreeTextValue(firstLine)
 	return { value: normalized || trimmed, confidence: 'inferred' }
 }

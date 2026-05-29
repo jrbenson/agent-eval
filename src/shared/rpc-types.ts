@@ -255,6 +255,11 @@ export type StoredEvaluation = CreateEvaluationParams & {
 	updatedAt: string
 }
 
+export type RunMetadataParams = {
+	tags?: string[]
+	favorite?: boolean
+}
+
 export type StoredRunRecord = {
 	id: string
 	sourceEvaluationId: string
@@ -266,6 +271,8 @@ export type StoredRunRecord = {
 	totalTrials: number
 	createdAt: string
 	completedAt: string | null
+	tags: string[]
+	favorite: boolean
 }
 
 export type StoredRunDetailRecord = StoredRunRecord & {
@@ -700,6 +707,10 @@ export type AppRPC = {
 				params: { runId: string }
 				response: StoredRunDetailRecord | null
 			}
+			updateRun: {
+				params: { runId: string } & Partial<RunMetadataParams>
+				response: { success: boolean }
+			}
 			getRunResults: {
 				params: { runId: string }
 				response: TrialSummaryResult[]
@@ -784,6 +795,7 @@ export type AppRPC = {
 					taskCount: number
 					resultCount: number
 					recentRuns: StoredRunRecord[]
+					favoriteRuns: StoredRunRecord[]
 				}
 			}
 

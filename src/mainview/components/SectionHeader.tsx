@@ -46,14 +46,14 @@ export function SectionHeader({
 					<Heading size="md" textTransform="uppercase">
 						{title}
 					</Heading>
-					{trailing}
-				</HStack>
-				<HStack gap={1} align="center">
 					{collapsible && (
-						<Icon boxSize={3} color="fg.subtle" flexShrink={0}>
+						<Icon boxSize={3} color="fg" flexShrink={0}>
 							{isOpen ? <FiChevronDown /> : <FiChevronRight />}
 						</Icon>
 					)}
+					{trailing}
+				</HStack>
+				<HStack gap={1} align="center">
 					<Text fontSize="xs" color="fg.muted" lineClamp={1}>
 						{description}
 					</Text>

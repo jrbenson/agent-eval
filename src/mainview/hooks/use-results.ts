@@ -127,6 +127,18 @@ export function useStartRun() {
 	})
 }
 
+export function useUpdateRun() {
+	const qc = useQueryClient()
+	return useMutation({
+		mutationFn: (params: Parameters<typeof rpcRequest.updateRun>[0]) =>
+			rpcRequest.updateRun(params),
+		onSuccess: (_, vars) => {
+			qc.invalidateQueries({ queryKey: ['runs'] })
+			qc.invalidateQueries({ queryKey: ['run', vars.runId] })
+		},
+	})
+}
+
 export function useCancelRun() {
 	const qc = useQueryClient()
 	return useMutation({

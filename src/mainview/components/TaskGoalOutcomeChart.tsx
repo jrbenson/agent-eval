@@ -3,7 +3,7 @@ import type { EChartsOption } from 'echarts'
 import ReactECharts from 'echarts-for-react'
 import { useMemo } from 'react'
 import type { TaskRunAnalysisResult } from '../../shared/rpc-types'
-import { chartAxisStyle, chartBaseOptions, useChartColors } from '../utils/chart-theme'
+import { chartAxisStyle, chartBaseOptions, useChartColors } from '../utils/charts/theme'
 
 function buildOption(analysis: TaskRunAnalysisResult, colors: ReturnType<typeof useChartColors>) {
 	const categories = analysis.aggregates.map((item) => item.agentConfigId)

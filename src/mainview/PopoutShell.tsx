@@ -134,7 +134,7 @@ export default function PopoutShell({
 			<PopoutProvider value={true}>
 				<TrailingActionProvider value={closeButton}>
 					<NavigationGuardContext.Provider value={{ setGuard }}>
-						<Box h="100vh" overflow="auto" bg="bg" color="fg">
+						<Box h="100%" overflow="auto" bg="bg" color="fg">
 							{renderBuilder(entityType, entityId)}
 						</Box>
 						<UnsavedChangesDialog

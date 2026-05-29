@@ -1,10 +1,23 @@
-import { Badge, Box, Card, Collapsible, HStack, Spinner, Text, VStack } from '@chakra-ui/react'
+import {
+	Badge,
+	Box,
+	Card,
+	Collapsible,
+	HStack,
+	Separator,
+	Spinner,
+	Text,
+	VStack,
+} from '@chakra-ui/react'
 import { useMemo, useState } from 'react'
 import { FiChevronDown, FiChevronRight } from 'react-icons/fi'
 import type { ExtractedAnswer, SurveyRunExtraction } from '../../shared/rpc-types'
 import { normalizeDisplayResponse } from '../utils/normalize-response'
 import ResponseHeatmap from './charts/ChoiceHeatmap'
+import LikertHistogram from './charts/LikertHistogram'
 import RankingChart from './charts/RankingChart'
+import RankingDistribution from './charts/RankingDistribution'
+import TotalsBarChart from './charts/TotalsBarChart'
 
 interface QuestionGroup {
 	questionId: string
@@ -93,34 +106,94 @@ function ConfidenceBadge({ answers }: { answers: ExtractedAnswer[] }) {
 	)
 }
 
+function formatTypeLabel(format: QuestionGroup['responseFormat']): string {
+	switch (format) {
+		case 'likert':
+			return 'Likert'
+		case 'multiple_choice':
+			return 'Choice'
+		case 'ranking':
+			return 'Ranking'
+		case 'free_text':
+			return 'Free Text'
+	}
+}
+
+function SectionHeader({
+	children,
+	pt = 4,
+}: {
+	children: React.ReactNode
+	pt?: number
+}) {
+	return (
+		<Text
+			fontSize="xs"
+			fontWeight="semibold"
+			color="fg.muted"
+			textTransform="uppercase"
+			letterSpacing="wide"
+			pt={pt}
+		>
+			{children}
+		</Text>
+	)
+}
+
 function QuestionChart({ group }: { group: QuestionGroup }) {
+	const typeLabel = formatTypeLabel(group.responseFormat)
+
 	switch (group.responseFormat) {
 		case 'likert': {
 			const LIKERT_LABELS = [
-				'1 – Strongly Disagree',
-				'2 – Disagree',
-				'3 – Neutral',
-				'4 – Agree',
 				'5 – Strongly Agree',
+				'4 – Agree',
+				'3 – Neutral',
+				'2 – Disagree',
+				'1 – Strongly Disagree',
 			]
 			return (
-				<ResponseHeatmap
-					agentGroups={group.agentGroups}
-					categories={LIKERT_LABELS}
-					getValue={(a) => (a.likertValue ? LIKERT_LABELS[a.likertValue - 1] : undefined)}
-				/>
+				<VStack gap={0} align="stretch">
+					<SectionHeader>{typeLabel} Results</SectionHeader>
+					<ResponseHeatmap
+						agentGroups={group.agentGroups}
+						categories={LIKERT_LABELS}
+						getValue={(a) => (a.likertValue ? LIKERT_LABELS[5 - a.likertValue] : undefined)}
+					/>
+					<Separator mt={4} />
+					<SectionHeader>Rating Distribution</SectionHeader>
+					<LikertHistogram agentGroups={group.agentGroups} />
+				</VStack>
 			)
 		}
 		case 'multiple_choice':
 			return (
-				<ResponseHeatmap
-					agentGroups={group.agentGroups}
-					categories={group.options ?? []}
-					getValue={(a) => a.choiceValue ?? undefined}
-				/>
+				<VStack gap={0} align="stretch">
+					<SectionHeader>{typeLabel} Results</SectionHeader>
+					<ResponseHeatmap
+						agentGroups={group.agentGroups}
+						categories={group.options ?? []}
+						getValue={(a) => a.choiceValue ?? undefined}
+					/>
+					<Separator mt={4} />
+					<SectionHeader>Choice Totals</SectionHeader>
+					<TotalsBarChart
+						agentGroups={group.agentGroups}
+						categories={group.options ?? []}
+						getValue={(a) => a.choiceValue ?? undefined}
+					/>
+				</VStack>
 			)
 		case 'ranking':
-			return <RankingChart agentGroups={group.agentGroups} options={group.options ?? []} />
+			return (
+				<VStack gap={2} align="stretch">
+					<SectionHeader>{typeLabel} Results</SectionHeader>
+					<RankingChart agentGroups={group.agentGroups} options={group.options ?? []} />
+					<Separator mt={4} />
+					<SectionHeader>Rank Distributions</SectionHeader>
+					<RankingDistribution agentGroups={group.agentGroups} options={group.options ?? []} />
+				</VStack>
+			)
 		case 'free_text': {
 			// Derive categories from actual responses, sorted by frequency
 			const counts = new Map<string, number>()
@@ -132,11 +205,21 @@ function QuestionChart({ group }: { group: QuestionGroup }) {
 			}
 			const categories = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([label]) => label)
 			return (
-				<ResponseHeatmap
-					agentGroups={group.agentGroups}
-					categories={categories}
-					getValue={(a) => normalizeDisplayResponse(a.freeTextValue ?? a.raw)}
-				/>
+				<VStack gap={0} align="stretch">
+					<SectionHeader>{typeLabel} Results</SectionHeader>
+					<ResponseHeatmap
+						agentGroups={group.agentGroups}
+						categories={categories}
+						getValue={(a) => normalizeDisplayResponse(a.freeTextValue ?? a.raw)}
+					/>
+					<Separator mt={4} />
+					<SectionHeader>Response Totals</SectionHeader>
+					<TotalsBarChart
+						agentGroups={group.agentGroups}
+						categories={categories}
+						getValue={(a) => normalizeDisplayResponse(a.freeTextValue ?? a.raw)}
+					/>
+				</VStack>
 			)
 		}
 		default:
@@ -144,7 +227,11 @@ function QuestionChart({ group }: { group: QuestionGroup }) {
 	}
 }
 
-function ResponsesList({ agentGroups }: { agentGroups: Map<string, ExtractedAnswer[]> }) {
+function ResponsesList({
+	agentGroups,
+}: {
+	agentGroups: Map<string, ExtractedAnswer[]>
+}) {
 	const [open, setOpen] = useState(false)
 	const total = [...agentGroups.values()].reduce((s, a) => s + a.length, 0)
 
@@ -157,9 +244,12 @@ function ResponsesList({ agentGroups }: { agentGroups: Map<string, ExtractedAnsw
 					cursor="pointer"
 					_hover={{ textDecoration: 'underline' }}
 					gap={1}
+					pt={4}
 				>
+					<Text fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide">
+						Response Details ({total})
+					</Text>
 					<Box as={open ? FiChevronDown : FiChevronRight} boxSize={3} />
-					<Text fontSize="xs">Responses ({total})</Text>
 				</HStack>
 			</Collapsible.Trigger>
 			<Collapsible.Content>
@@ -242,6 +332,7 @@ export default function SurveyResultsPanel({
 								</HStack>
 							</HStack>
 							<QuestionChart group={group} />
+							<Separator mt={4} />
 							<ResponsesList agentGroups={group.agentGroups} />
 						</VStack>
 					</Card.Body>

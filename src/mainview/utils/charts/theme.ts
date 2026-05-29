@@ -1,8 +1,8 @@
-import { system } from '../theme'
+import { system } from '../../theme'
 
 /**
  * Resolve Chakra UI color tokens into hex values for use in ECharts.
- * Semantic tokens (fg, border) resolve to CSS variables which ECharts can't use,
+ * Semantic tokens resolve to CSS variables which ECharts can't use,
  * so we resolve them at runtime via getComputedStyle.
  */
 function resolveCssVar(value: string): string {
@@ -47,7 +47,6 @@ export type ChartColors = ReturnType<typeof useChartColors>
 
 /**
  * Base ECharts theme options derived from Chakra colors.
- * Spread into chart options for consistent styling.
  */
 export function chartBaseOptions(colors: ChartColors) {
 	return {
@@ -73,3 +72,20 @@ export function chartAxisStyle(colors: ChartColors) {
 		},
 	}
 }
+
+/** Standard series color palette. */
+export const SERIES_COLORS = [
+	'#3b82f6',
+	'#8b5cf6',
+	'#ec4899',
+	'#f97316',
+	'#22c55e',
+	'#06b6d4',
+	'#f43f5e',
+	'#a855f7',
+	'#14b8a6',
+	'#eab308',
+]
+
+/** Zero-padding grid/matrix positioning — containers handle all spacing. */
+export const chartGridZero = { top: 0, bottom: 0, left: 0, right: 0 } as const

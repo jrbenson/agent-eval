@@ -31,6 +31,8 @@ type RunRecordFile = {
 	totalTrials: number
 	createdAt: string
 	completedAt: string | null
+	tags?: string[]
+	favorite?: boolean
 }
 
 export interface RunRecord extends RunRecordFile {
@@ -55,6 +57,8 @@ function hydrateRunRecord(id: string, meta: RunRecordFile): RunRecord & { id: st
 		},
 		agentConfigs: meta.evaluationSnapshot.agentConfigs,
 		concurrency: meta.evaluationSnapshot.concurrency,
+		tags: meta.tags ?? [],
+		favorite: meta.favorite ?? false,
 	}
 }
 
@@ -109,6 +113,18 @@ export function updateRunStatus(
 		meta.completedAt = new Date().toISOString()
 	}
 	writeJsonAtomic(evaluationMetaPath(id), meta)
+}
+
+export function updateRunMetadata(
+	id: string,
+	patch: { tags?: string[]; favorite?: boolean },
+): boolean {
+	const meta = readJsonOrNull<RunRecordFile>(evaluationMetaPath(id))
+	if (!meta) return false
+	if (patch.tags !== undefined) meta.tags = patch.tags
+	if (patch.favorite !== undefined) meta.favorite = patch.favorite
+	writeJsonAtomic(evaluationMetaPath(id), meta)
+	return true
 }
 
 export function listRuns(evaluationId?: string): (RunRecord & { id: string })[] {
@@ -243,5 +259,6 @@ export function getDashboardStats() {
 		taskCount,
 		resultCount: allRuns.length,
 		recentRuns: allRuns.slice(0, 5),
+		favoriteRuns: allRuns.filter((r) => r.favorite),
 	}
 }

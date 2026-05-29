@@ -1,81 +1,96 @@
-import type { EChartsOption } from 'echarts'
 import ReactECharts from 'echarts-for-react'
 import { useMemo } from 'react'
 import type { ExtractedAnswer } from '../../../shared/rpc-types'
+import { buildAgentHierarchy, buildLeafLabels } from '../../utils/charts/agent-axis'
+import { asMatrixData, matrixBorderless } from '../../utils/charts/matrix'
 import {
 	type ChartColors,
-	chartAxisStyle,
+	SERIES_COLORS,
 	chartBaseOptions,
+	chartGridZero,
 	useChartColors,
-} from '../../utils/chart-theme'
-
-const SERIES_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#06b6d4']
+} from '../../utils/charts/theme'
 
 function buildOption(
 	agentGroups: Map<string, ExtractedAnswer[]>,
 	options: string[],
 	colors: ChartColors,
-): EChartsOption {
+) {
 	const agents = [...agentGroups.keys()]
-	const axisStyle = chartAxisStyle(colors)
+	const leafLabels = buildLeafLabels(agents)
+	const xData = buildAgentHierarchy(agents, leafLabels)
 
-	// For each agent + option, compute average rank (lower = better)
-	const series = agents.map((agent, agentIdx) => ({
-		name: agent,
-		type: 'bar' as const,
-		itemStyle: { color: SERIES_COLORS[agentIdx % SERIES_COLORS.length] },
-		data: options.map((_opt, optIdx) => {
-			const group = agentGroups.get(agent) ?? []
-			const ranks: number[] = []
-			for (const a of group) {
-				if (a.rankingIndices && a.rankingValue) {
-					const pos = a.rankingIndices.indexOf(optIdx)
-					if (pos >= 0) ranks.push(pos + 1) // 1-based rank
+	// Y axis: rank positions 1..N
+	const rankLabels = options.map((_, i) => `${i + 1}`)
+
+	// One pie series per matrix cell (agent × rank)
+	const series: object[] = []
+
+	for (const agent of agents) {
+		const group = agentGroups.get(agent) ?? []
+		const label = leafLabels.get(agent)!
+
+		for (let rank = 0; rank < options.length; rank++) {
+			// Count how many times each option was placed at this rank
+			const data: { value: number; name: string }[] = []
+			for (let optIdx = 0; optIdx < options.length; optIdx++) {
+				let count = 0
+				for (const a of group) {
+					if (a.rankingIndices && a.rankingIndices[rank] === optIdx) {
+						count++
+					}
+				}
+				if (count > 0) {
+					data.push({ value: count, name: options[optIdx] })
 				}
 			}
-			if (ranks.length === 0) return 0
-			return +(ranks.reduce((s, v) => s + v, 0) / ranks.length).toFixed(1)
-		}),
-	}))
+
+			if (data.length > 0) {
+				series.push({
+					type: 'pie',
+					coordinateSystem: 'matrix',
+					center: [label, `${rank + 1}`],
+					radius: '80%',
+					data,
+					label: { show: false },
+					labelLine: { show: false },
+					emphasis: { label: { show: false } },
+					color: data.map((d) => SERIES_COLORS[options.indexOf(d.name) % SERIES_COLORS.length]),
+				})
+			}
+		}
+	}
 
 	return {
 		...chartBaseOptions(colors),
-		tooltip: {
-			trigger: 'axis',
-			axisPointer: { type: 'shadow' },
-			formatter: (params: unknown) => {
-				const items = params as {
-					seriesName: string
-					value: number
-					marker: string
-					axisValue?: string
-				}[]
-				if (!Array.isArray(items)) return ''
-				const header = items[0]?.axisValue ?? ''
-				const lines = items
-					.filter((i) => i.value > 0)
-					.map((i) => `${i.marker} ${i.seriesName}: avg rank ${i.value}`)
-				return `<strong>${header}</strong><br/>${lines.join('<br/>')}`
-			},
-		},
+		tooltip: { show: true },
 		legend: {
-			data: agents,
+			data: options,
 			textStyle: { color: colors.axisLabel, fontSize: 10 },
 			bottom: 0,
+			type: 'scroll' as const,
 		},
-		grid: { left: 120, right: 20, top: 10, bottom: 50 },
-		yAxis: {
-			type: 'category',
-			data: options,
-			...axisStyle,
-			axisLabel: { ...axisStyle.axisLabel, width: 100, overflow: 'truncate' },
-			inverse: true,
-		},
-		xAxis: {
-			type: 'value',
-			name: 'Avg Rank (lower = preferred)',
-			nameTextStyle: { color: colors.axisLabel, fontSize: 11 },
-			...axisStyle,
+		matrix: {
+			x: {
+				data: asMatrixData(xData),
+				label: { color: colors.fg, fontSize: 12, fontWeight: 'bold' },
+				...matrixBorderless(),
+			},
+			y: {
+				data: rankLabels,
+				label: { color: colors.fg, fontSize: 11 },
+				...matrixBorderless(),
+			},
+			body: {
+				itemStyle: { borderWidth: 0 },
+			},
+			backgroundStyle: {
+				color: 'transparent',
+				borderColor: 'transparent',
+				borderWidth: 0,
+			},
+			...chartGridZero,
+			bottom: 30,
 		},
 		series,
 	}
@@ -93,7 +108,7 @@ export default function RankingChart({ agentGroups, options }: RankingChartProps
 		[agentGroups, options, colors],
 	)
 
-	const chartHeight = Math.max(120, options.length * 40 + 70)
+	const chartHeight = Math.max(200, options.length * 36 + 100)
 
 	return <ReactECharts option={option} style={{ height: chartHeight }} opts={{ renderer: 'svg' }} />
 }

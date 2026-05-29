@@ -5,15 +5,17 @@ import {
 	Checkbox,
 	Flex,
 	HStack,
+	IconButton,
 	Link,
 	Progress,
 	Table,
 	Tabs,
+	TagsInput,
 	Text,
 	VStack,
 } from '@chakra-ui/react'
 import { useEffect, useMemo, useState } from 'react'
-import { FiSquare } from 'react-icons/fi'
+import { FiSquare, FiStar } from 'react-icons/fi'
 import type {
 	AnalysisLens,
 	RunProgress,
@@ -41,6 +43,7 @@ import {
 	useRunStatus,
 	useSurveyRunAnswers,
 	useTaskRunAnalysis,
+	useUpdateRun,
 } from '../hooks/use-results'
 import { useSurvey } from '../hooks/use-surveys'
 import { useTask } from '../hooks/use-tasks'
@@ -135,6 +138,7 @@ export function RunDetail({
 	const { data: runRecord } = useRun(runId)
 	const { data: runResults, isLoading, refetch: refetchResults } = useRunResults(runId)
 	const cancelRun = useCancelRun()
+	const updateRun = useUpdateRun()
 	const [selectedTrialId, setSelectedTrialId] = useState<string | null>(null)
 	const [liveProgress, setLiveProgress] = useState<RunProgress | null>(null)
 	const [analysisLens, setAnalysisLens] = useState<AnalysisLens>('current')
@@ -318,20 +322,41 @@ export function RunDetail({
 			breadcrumbs={breadcrumbs}
 			subHeader={
 				results.length > 0 ? (
-					<Text fontSize="sm" color="fg.muted">
-						Evaluation (<Link onClick={() => setConfigDialog('current-evaluation')}>current</Link>
-						{' / '}
-						<Link onClick={() => setConfigDialog('snapshot-evaluation')} aria-disabled={!runRecord}>
-							snapshot
-						</Link>
-						) - {scenarioEntityLabel} (
-						<Link onClick={() => setConfigDialog('current-scenario')}>current</Link>
-						{' / '}
-						<Link onClick={() => setConfigDialog('snapshot-scenario')} aria-disabled={!runRecord}>
-							snapshot
-						</Link>
-						)
-					</Text>
+					<HStack gap={4} flexWrap="wrap">
+						<Text fontSize="sm" color="fg.muted">
+							Evaluation (<Link onClick={() => setConfigDialog('current-evaluation')}>current</Link>
+							{' / '}
+							<Link
+								onClick={() => setConfigDialog('snapshot-evaluation')}
+								aria-disabled={!runRecord}
+							>
+								snapshot
+							</Link>
+							) - {scenarioEntityLabel} (
+							<Link onClick={() => setConfigDialog('current-scenario')}>current</Link>
+							{' / '}
+							<Link onClick={() => setConfigDialog('snapshot-scenario')} aria-disabled={!runRecord}>
+								snapshot
+							</Link>
+							)
+						</Text>
+						<TagsInput.Root
+							size="sm"
+							value={runRecord?.tags ?? []}
+							onValueChange={(details) => updateRun.mutate({ runId, tags: details.value })}
+							blurBehavior="add"
+							delimiter=","
+							validate={(e) => {
+								const trimmed = e.inputValue.trim()
+								return trimmed.length > 0 && !(runRecord?.tags ?? []).includes(trimmed)
+							}}
+						>
+							<TagsInput.Control>
+								<TagsInput.Items />
+								<TagsInput.Input placeholder="Add tag…" fontSize="xs" />
+							</TagsInput.Control>
+						</TagsInput.Root>
+					</HStack>
 				) : undefined
 			}
 			inlineStatus={
@@ -353,18 +378,32 @@ export function RunDetail({
 				</HStack>
 			}
 			actions={
-				isActive ? (
-					<Button
+				<HStack gap={2}>
+					<IconButton
+						aria-label="Toggle favorite"
+						variant="ghost"
 						size="sm"
-						colorPalette="red"
-						variant="outline"
-						onClick={handleCancel}
-						loading={cancelRun.isPending}
+						onClick={() => updateRun.mutate({ runId, favorite: !runRecord?.favorite })}
 					>
-						<Box as={FiSquare} />
-						Cancel
-					</Button>
-				) : undefined
+						<Box
+							as={FiStar}
+							fill={runRecord?.favorite ? 'currentColor' : 'none'}
+							color={runRecord?.favorite ? 'yellow.400' : undefined}
+						/>
+					</IconButton>
+					{isActive && (
+						<Button
+							size="sm"
+							colorPalette="red"
+							variant="outline"
+							onClick={handleCancel}
+							loading={cancelRun.isPending}
+						>
+							<Box as={FiSquare} />
+							Cancel
+						</Button>
+					)}
+				</HStack>
 			}
 		>
 			<VStack gap={4} align="stretch">

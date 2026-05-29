@@ -44,6 +44,7 @@ import {
 	useUtilityLlmProfiles,
 	useValidateApiKey,
 } from '../hooks/use-configs'
+import { useZoom } from '../hooks/use-zoom'
 import { rpcRequest } from '../rpc'
 
 const PROVIDERS = [
@@ -349,6 +350,48 @@ function UtilityLlmProfileForm({
 	)
 }
 
+function InterfaceSection() {
+	const { zoom, setZoom, zoomIn, zoomOut, resetZoom, MIN_ZOOM, MAX_ZOOM, STEP } = useZoom()
+	return (
+		<VStack gap={4} align="stretch">
+			<SectionHeader title="Interface" description="Appearance and display settings." />
+			<Field.Root>
+				<Field.Label fontSize="sm" mb={1}>
+					Zoom ({Math.round(zoom * 100)}%)
+				</Field.Label>
+				<HStack gap={3}>
+					<Button size="xs" variant="outline" onClick={zoomOut} disabled={zoom <= MIN_ZOOM}>
+						−
+					</Button>
+					<Input
+						size="sm"
+						type="number"
+						min={MIN_ZOOM}
+						max={MAX_ZOOM}
+						step={STEP}
+						value={zoom}
+						onChange={(e) => {
+							const val = Number.parseFloat(e.target.value)
+							if (!Number.isNaN(val)) setZoom(val)
+						}}
+						w="80px"
+						textAlign="center"
+					/>
+					<Button size="xs" variant="outline" onClick={zoomIn} disabled={zoom >= MAX_ZOOM}>
+						+
+					</Button>
+					<Button size="xs" variant="ghost" onClick={resetZoom}>
+						Reset
+					</Button>
+				</HStack>
+				<Text fontSize="xs" color="fg.subtle" mt={1}>
+					Use ⌘+/⌘− to adjust, ⌘0 to reset.
+				</Text>
+			</Field.Root>
+		</VStack>
+	)
+}
+
 function UtilityLlmSection({
 	onStatusChange,
 }: {
@@ -484,6 +527,9 @@ export default function SettingsPage() {
 			}
 		>
 			<VStack gap={10} align="stretch">
+				{/* Interface */}
+				<InterfaceSection />
+
 				{/* API key entry */}
 				<VStack gap={4} align="stretch">
 					<SectionHeader

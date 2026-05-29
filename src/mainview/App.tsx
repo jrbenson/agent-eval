@@ -17,6 +17,7 @@ import UnsavedChangesDialog from './components/UnsavedChangesDialog'
 import { useDataChangedListener } from './hooks/use-data-changed'
 import { NavigationGuardContext } from './hooks/use-navigation-guard'
 import { usePendingGuardAction } from './hooks/use-pending-guard-action'
+import { useZoom } from './hooks/use-zoom'
 import ContextPage from './pages/Context'
 import DashboardPage from './pages/Dashboard'
 import EvaluationsPage from './pages/Evaluations'
@@ -44,6 +45,7 @@ function App() {
 	const qc = useQueryClient()
 
 	useDataChangedListener()
+	useZoom()
 
 	const {
 		handleCancel,
@@ -112,7 +114,7 @@ function App() {
 
 	return (
 		<NavigationGuardContext.Provider value={{ setGuard }}>
-			<Flex h="100vh" overflow="hidden" bg="bg" color="fg">
+			<Flex h="100%" overflow="hidden" bg="bg" color="fg">
 				{/* Sidebar */}
 				<Box
 					w={sidebarCollapsed ? '60px' : '220px'}
