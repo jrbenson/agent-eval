@@ -1,6 +1,6 @@
 {
 	"name": "agent-eval",
-	"version": "0.1.5",
+	"version": "0.2.0",
 	"description": "Agent evaluation tool using UX research methods",
 	"author": "Riley Benson",
 	"license": "MIT",
