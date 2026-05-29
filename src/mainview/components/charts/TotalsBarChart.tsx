@@ -44,7 +44,12 @@ function buildOption(
 		yAxis: {
 			type: 'category' as const,
 			data: sorted,
-			axisLabel: { color: colors.axisLabel, fontSize: 10 },
+			axisLabel: {
+				color: colors.axisLabel,
+				fontSize: 10,
+				overflow: 'truncate' as const,
+				ellipsis: '...',
+			},
 			axisLine: { lineStyle: { color: colors.axisLine } },
 			axisTick: { show: false },
 		},

@@ -6,6 +6,41 @@ import { getUtilityModel } from '../provider-registry'
 
 import type { UtilityLlmCall } from '../mock-runtime'
 
+/**
+ * Build a simplified conversation for the simulation model with roles swapped.
+ * Original "assistant" text becomes "user" (things the AI said to the simulated user)
+ * and original "user" messages become "assistant" (the simulated user's prior messages).
+ * Tool-call messages and tool-result messages are omitted since they're internal
+ * mechanics the simulated user wouldn't see.
+ */
+function buildSimulationMessages(messages: ModelMessage[]): ModelMessage[] {
+	const result: ModelMessage[] = []
+	for (const msg of messages) {
+		if (msg.role === 'user') {
+			// Extract text content from user messages
+			const text = extractTextContent(msg)
+			if (text) result.push({ role: 'assistant', content: text })
+		} else if (msg.role === 'assistant') {
+			// Only include assistant messages that have text content (skip pure tool-call messages)
+			const text = extractTextContent(msg)
+			if (text) result.push({ role: 'user', content: text })
+		}
+		// Skip 'tool' role messages entirely — they're invisible to the user
+	}
+	return result
+}
+
+function extractTextContent(msg: ModelMessage): string | null {
+	if (typeof msg.content === 'string') return msg.content || null
+	if (Array.isArray(msg.content)) {
+		const textParts = msg.content
+			.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+			.map((p) => p.text)
+		return textParts.length > 0 ? textParts.join('') : null
+	}
+	return null
+}
+
 const SIMULATION_SYSTEM_PROMPT = `You are role-playing as a human user chatting with an AI assistant. Write the NEXT message the user would send.
 
 Critical rules:
@@ -86,11 +121,16 @@ export async function generateSimulatedPrompt(
 	const userPromptContent = buildSimulationUserPrompt(unmetGoals, simulationInstructions)
 	const systemContent = `${SIMULATION_SYSTEM_PROMPT}\n\n${userPromptContent}`
 
+	// Swap roles so the model generates from the user's perspective:
+	// the AI assistant's messages appear as "user" (prompting the sim),
+	// and the simulated user's prior messages appear as "assistant" (its own history).
+	const simulationMessages = buildSimulationMessages(conversationMessages)
+
 	const callStart = Date.now()
 	const result = await generateText({
 		model,
 		system: systemContent,
-		messages: conversationMessages,
+		messages: simulationMessages,
 		temperature: profile.temperature,
 		...(profile.maxTokens ? { maxOutputTokens: profile.maxTokens } : {}),
 	})

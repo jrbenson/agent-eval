@@ -1,6 +1,6 @@
 import type { RunProgress } from '../../../shared/rpc-types'
 import { getEvaluation } from '../../data/evaluations'
-import { appendTrialSummary, createRun, updateRunStatus } from '../../data/runs'
+import { appendTrialSummary, createRun, saveTrial, updateRunStatus } from '../../data/runs'
 import { type StoredSurvey, getSurvey } from '../../data/surveys'
 import { type StoredTask, getTask } from '../../data/tasks'
 import { ConcurrencyLimiter } from '../concurrency'
@@ -172,7 +172,16 @@ async function executeTrials(args: {
 				}
 			} catch (error) {
 				const errorMessage = error instanceof Error ? error.message : String(error)
-				appendFailureSummary(args.runId, trialId, agentConfigId, errorMessage, work.variantId)
+				appendFailureSummary(
+					args.runId,
+					trialId,
+					agentConfigId,
+					errorMessage,
+					work.entry.config,
+					args.scenarioType,
+					args.scenarioId,
+					work.variantId,
+				)
 				hasError = true
 			}
 
@@ -196,8 +205,46 @@ function appendFailureSummary(
 	trialId: string,
 	agentConfigId: string,
 	errorMessage: string,
+	agentConfig: {
+		provider: string
+		model: string
+		temperature: number
+		maxTokens?: number
+		topP?: number
+		reasoning?: string
+	},
+	scenarioType: 'survey' | 'task',
+	scenarioId: string,
 	variantId?: string,
 ) {
+	// Save a minimal TrialData so the detail page can display the error
+	saveTrial(runId, trialId, {
+		trialId,
+		runId,
+		agent: {
+			provider: agentConfig.provider,
+			model: agentConfig.model,
+			temperature: agentConfig.temperature,
+			maxTokens: agentConfig.maxTokens,
+			topP: agentConfig.topP,
+			reasoning: agentConfig.reasoning,
+		},
+		scenarioType,
+		scenarioId,
+		messages: [],
+		steps: [],
+		metrics: {
+			totalTokens: 0,
+			promptTokens: 0,
+			completionTokens: 0,
+			totalLatencyMs: 0,
+			stepCount: 0,
+			finishReason: 'error',
+		},
+		status: 'failed',
+		error: errorMessage,
+		createdAt: new Date().toISOString(),
+	})
 	appendTrialSummary(
 		runId,
 		createFailedTrialSummary(trialId, agentConfigId, errorMessage, variantId),

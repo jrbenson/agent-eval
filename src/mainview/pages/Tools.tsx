@@ -1,6 +1,6 @@
-import { Button, FileUpload, HStack, Table, Text, VStack } from '@chakra-ui/react'
+import { Button, FileUpload, HStack, IconButton, Table, Text, VStack } from '@chakra-ui/react'
 import { useState } from 'react'
-import { FiDownload, FiLayers, FiPackage, FiPlus, FiTool } from 'react-icons/fi'
+import { FiCopy, FiDownload, FiLayers, FiPackage, FiPlus, FiTool } from 'react-icons/fi'
 import type { ImportToolResult } from '../../shared/rpc-types'
 import type { StoredToolDefinition } from '../../shared/schemas/tool-definition.schema'
 import type { StoredToolSet } from '../../shared/schemas/tool-set.schema'
@@ -22,6 +22,7 @@ import {
 	useCommitToolImport,
 	useCopyPresetTool,
 	useDeleteToolDefinition,
+	useDuplicateToolDefinition,
 	usePresetTools,
 	useToolDefinitions,
 } from '../hooks/use-tool-definitions'
@@ -90,6 +91,7 @@ export default function ToolsPage() {
 	const { data: toolDefs, isLoading: isToolDefsLoading } = useToolDefinitions()
 	const { data: toolSets, isLoading: isToolSetsLoading } = useToolSets()
 	const deleteToolDef = useDeleteToolDefinition()
+	const duplicateToolDef = useDuplicateToolDefinition()
 	const deleteToolSet = useDeleteToolSet()
 
 	// Presets
@@ -366,7 +368,20 @@ export default function ToolsPage() {
 								{new Date(t.createdAt).toLocaleDateString()}
 							</Table.Cell>
 							<Table.Cell textAlign="end" width="1" whiteSpace="nowrap">
-								<ConfirmDeleteButton onDelete={() => deleteToolDef.mutate(t.id)} />
+								<HStack gap={0}>
+									<IconButton
+										aria-label="Duplicate"
+										size="xs"
+										variant="ghost"
+										onClick={(e) => {
+											e.stopPropagation()
+											duplicateToolDef.mutate(t.id)
+										}}
+									>
+										<FiCopy />
+									</IconButton>
+									<ConfirmDeleteButton onDelete={() => deleteToolDef.mutate(t.id)} />
+								</HStack>
 							</Table.Cell>
 							<Table.Cell width="1" whiteSpace="nowrap">
 								<RowPopoutButton entityType="toolDefinition" entityId={t.id} />

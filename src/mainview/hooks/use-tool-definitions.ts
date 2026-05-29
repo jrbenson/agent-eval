@@ -49,6 +49,28 @@ export function useDeleteToolDefinition() {
 	})
 }
 
+export function useDuplicateToolDefinition() {
+	const qc = useQueryClient()
+	return useMutation({
+		mutationFn: async (id: string) => {
+			const tool = await rpcRequest.getToolDefinition({ id })
+			if (!tool) throw new Error('Tool not found')
+			return rpcRequest.createToolDefinition({
+				label: `${tool.label ?? tool.name} (Copy)`,
+				name: `${tool.name}_copy`,
+				description: tool.description,
+				parameters: tool.parameters,
+				mockResponse: tool.mockResponse,
+				core: tool.core,
+				keywords: tool.keywords,
+			})
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ['toolDefinitions'] })
+		},
+	})
+}
+
 export function useBulkDeleteToolDefinitions() {
 	const qc = useQueryClient()
 	return useMutation({
