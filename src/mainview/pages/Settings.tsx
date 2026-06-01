@@ -26,6 +26,11 @@ import {
 	FiRefreshCw,
 	FiSave,
 } from 'react-icons/fi'
+import {
+	PROVIDER_GROUP_LABELS,
+	PROVIDER_META,
+	type ProviderGroup,
+} from '../../shared/provider-meta'
 import type { UtilityLlmProfile, UtilityLlmPurpose } from '../../shared/rpc-types'
 import ListPageLayout from '../components/ListPageLayout'
 import { SaveIndicator } from '../components/SaveIndicator'
@@ -47,15 +52,16 @@ import {
 import { useZoom } from '../hooks/use-zoom'
 import { rpcRequest } from '../rpc'
 
-const PROVIDERS = [
-	{ id: 'openai', name: 'OpenAI' },
-	{ id: 'anthropic', name: 'Anthropic' },
-	{ id: 'google', name: 'Google' },
-	{ id: 'azure', name: 'Azure OpenAI' },
-	{ id: 'xai', name: 'xAI' },
-	{ id: 'groq', name: 'Groq' },
-	{ id: 'mistral', name: 'Mistral' },
-]
+/** Providers grouped for rendering in the settings page */
+const PROVIDERS_BY_GROUP = PROVIDER_META.reduce(
+	(acc, p) => {
+		;(acc[p.group] ??= []).push(p)
+		return acc
+	},
+	{} as Record<ProviderGroup, typeof PROVIDER_META>,
+)
+
+const GROUP_ORDER: ProviderGroup[] = ['direct', 'hosted', 'platform', 'local', 'custom']
 
 type KeyStatus = 'unvalidated' | 'valid' | 'invalid'
 
@@ -198,6 +204,57 @@ function AzureModelsField({
 	)
 }
 
+function ProviderConfigFields({
+	provider,
+	fields,
+	onStatusChange,
+}: {
+	provider: string
+	fields: { key: string; label: string; placeholder: string; required: boolean }[]
+	onStatusChange?: (status: AutosaveStatus) => void
+}) {
+	const { data: config } = useProviderConfig(provider)
+	const setProviderConfig = useSetProviderConfig()
+	const [values, setValues] = useState<Record<string, string>>({})
+	const hydratedRef = useRef(false)
+
+	useEffect(() => {
+		if (!hydratedRef.current && config) {
+			const initial: Record<string, string> = {}
+			for (const f of fields) {
+				if (config[f.key]) initial[f.key] = config[f.key]
+			}
+			setValues(initial)
+			hydratedRef.current = true
+		}
+	}, [config, fields])
+
+	const dataSnapshot = JSON.stringify(values)
+	useAutosave(
+		dataSnapshot,
+		async () => {
+			await setProviderConfig.mutateAsync({ provider, config: values })
+		},
+		{ skip: fields.some((f) => f.required && !values[f.key]?.trim()), onStatusChange },
+	)
+
+	return (
+		<HStack mt={2} w="full" gap={2} flexWrap="wrap">
+			{fields.map((f) => (
+				<Input
+					key={f.key}
+					flex="1"
+					minW="150px"
+					size="sm"
+					placeholder={`${f.label} (${f.placeholder})`}
+					value={values[f.key] || ''}
+					onChange={(e) => setValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+				/>
+			))}
+		</HStack>
+	)
+}
+
 const UTILITY_LLM_PURPOSES: {
 	key: UtilityLlmPurpose
 	label: string
@@ -256,6 +313,21 @@ function UtilityLlmProfileForm({
 	const [maxTokens, setMaxTokens] = useState(profile?.maxTokens?.toString() ?? '')
 
 	const { data: providerStatus } = useProviderStatus()
+
+	const configuredProviders = useMemo(() => {
+		const configuredSet = new Set<string>()
+		if (Array.isArray(providerStatus)) {
+			for (const ps of providerStatus) {
+				if (ps.isSet) configuredSet.add(ps.provider)
+			}
+		}
+		for (const p of PROVIDER_META) {
+			if (!p.requiresKey) configuredSet.add(p.id)
+		}
+		const items = PROVIDER_META.filter((p) => configuredSet.has(p.id))
+		return items.length > 0 ? items : PROVIDER_META
+	}, [providerStatus])
+
 	const isProviderValid = useMemo(() => {
 		if (!Array.isArray(providerStatus)) return false
 		const ps = providerStatus.find((p) => p.provider === provider)
@@ -291,7 +363,7 @@ function UtilityLlmProfileForm({
 					<Field.Label fontSize="xs">Provider:</Field.Label>
 					<NativeSelect.Root size="sm" disabled={disabled}>
 						<NativeSelect.Field value={provider} onChange={(e) => setProvider(e.target.value)}>
-							{PROVIDERS.map((p) => (
+							{configuredProviders.map((p) => (
 								<option key={p.id} value={p.id}>
 									{p.name}
 								</option>
@@ -536,102 +608,138 @@ export default function SettingsPage() {
 						title="API Keys"
 						description="Enter keys for each provider you want to use."
 					/>
-					<VStack gap={4} align="stretch">
-						{PROVIDERS.map((p) => {
-							const info = statusMap.get(p.id)
-							const isValid = info?.keyStatus === 'valid'
-
+					<VStack gap={6} align="stretch">
+						{GROUP_ORDER.map((group) => {
+							const providers = PROVIDERS_BY_GROUP[group]
+							if (!providers?.length) return null
 							return (
-								<Field.Root key={p.id}>
-									<Field.Label fontSize="sm" mb={1}>
-										<HStack gap={2}>
-											<Text>{p.name}</Text>
-											<KeyStatusIndicator status={info?.keyStatus ?? null} />
-											<Spacer />
-											{info?.isSet && (
-												<>
-													<IconButton
-														aria-label="Revalidate key"
-														size="2xs"
-														variant="ghost"
-														onClick={() => handleRevalidate(p.id)}
-														loading={validateKey.isPending}
-													>
-														<FiRefreshCw size={10} />
-													</IconButton>
-													<ModelsPopover provider={p.id} isValid={isValid} />
-												</>
-											)}
-										</HStack>
-									</Field.Label>
-									<HStack w="full">
-										<InputGroup
-											flex="1"
-											endElement={
-												<Box
-													as="button"
-													onClick={() =>
-														setShowKey((prev) => ({
-															...prev,
-															[p.id]: !prev[p.id],
-														}))
-													}
-												>
-													{showKey[p.id] ? <FiEyeOff size={14} /> : <FiEye size={14} />}
-												</Box>
-											}
-										>
-											<Input
-												size="sm"
-												type={showKey[p.id] ? 'text' : 'password'}
-												placeholder={
-													info?.isSet
-														? '••••••••  (key already set, enter new to replace)'
-														: `Enter ${p.name} API key`
-												}
-												value={keys[p.id] || ''}
-												onChange={(e) =>
-													setKeys((prev) => ({
-														...prev,
-														[p.id]: e.target.value,
-													}))
-												}
-											/>
-										</InputGroup>
-										<Button
-											size="sm"
-											colorPalette="blue"
-											variant="solid"
-											onClick={() => handleSave(p.id)}
-											loading={setApiKey.isPending}
-											disabled={!keys[p.id]?.trim()}
-										>
-											<FiSave />
-											Save
-										</Button>
-									</HStack>
-									{p.id === 'azure' && (
-										<AzureResourceField
-											onSave={async (resourceName) => {
-												await setProviderConfig.mutateAsync({
-													provider: 'azure',
-													config: { resourceName },
-												})
-											}}
-											onStatusChange={setSaveStatus}
-										/>
-									)}
-									{p.id === 'azure' && (
-										<AzureModelsField
-											onSave={async (models) => {
-												await setProviderConfig.mutateAsync({
-													provider: 'azure',
-													config: { models: JSON.stringify(models) },
-												})
-											}}
-										/>
-									)}
-								</Field.Root>
+								<VStack key={group} gap={3} align="stretch">
+									<Text
+										fontSize="xs"
+										fontWeight="bold"
+										color="fg.muted"
+										textTransform="uppercase"
+										letterSpacing="wider"
+									>
+										{PROVIDER_GROUP_LABELS[group]}
+									</Text>
+									{providers.map((p) => {
+										const info = statusMap.get(p.id)
+										const isValid = info?.keyStatus === 'valid'
+
+										return (
+											<Field.Root key={p.id}>
+												<Field.Label fontSize="sm" mb={1}>
+													<HStack gap={2}>
+														<Text>{p.name}</Text>
+														{p.requiresKey && (
+															<KeyStatusIndicator status={info?.keyStatus ?? null} />
+														)}
+														{!p.requiresKey && (
+															<Badge size="sm" colorPalette="gray" variant="subtle">
+																No key needed
+															</Badge>
+														)}
+														<Spacer />
+														{info?.isSet && (
+															<>
+																<IconButton
+																	aria-label="Revalidate key"
+																	size="2xs"
+																	variant="ghost"
+																	onClick={() => handleRevalidate(p.id)}
+																	loading={validateKey.isPending}
+																>
+																	<FiRefreshCw size={10} />
+																</IconButton>
+																<ModelsPopover provider={p.id} isValid={isValid} />
+															</>
+														)}
+														{!p.requiresKey && <ModelsPopover provider={p.id} isValid={true} />}
+													</HStack>
+												</Field.Label>
+												{p.requiresKey && (
+													<HStack w="full">
+														<InputGroup
+															flex="1"
+															endElement={
+																<Box
+																	as="button"
+																	onClick={() =>
+																		setShowKey((prev) => ({
+																			...prev,
+																			[p.id]: !prev[p.id],
+																		}))
+																	}
+																>
+																	{showKey[p.id] ? <FiEyeOff size={14} /> : <FiEye size={14} />}
+																</Box>
+															}
+														>
+															<Input
+																size="sm"
+																type={showKey[p.id] ? 'text' : 'password'}
+																placeholder={
+																	info?.isSet
+																		? '••••••••  (key already set, enter new to replace)'
+																		: `Enter ${p.name} API key`
+																}
+																value={keys[p.id] || ''}
+																onChange={(e) =>
+																	setKeys((prev) => ({
+																		...prev,
+																		[p.id]: e.target.value,
+																	}))
+																}
+															/>
+														</InputGroup>
+														<Button
+															size="sm"
+															colorPalette="blue"
+															variant="solid"
+															onClick={() => handleSave(p.id)}
+															loading={setApiKey.isPending}
+															disabled={!keys[p.id]?.trim()}
+														>
+															<FiSave />
+															Save
+														</Button>
+													</HStack>
+												)}
+												{/* Azure special fields */}
+												{p.id === 'azure' && (
+													<AzureResourceField
+														onSave={async (resourceName) => {
+															await setProviderConfig.mutateAsync({
+																provider: 'azure',
+																config: { resourceName },
+															})
+														}}
+														onStatusChange={setSaveStatus}
+													/>
+												)}
+												{p.id === 'azure' && (
+													<AzureModelsField
+														onSave={async (models) => {
+															await setProviderConfig.mutateAsync({
+																provider: 'azure',
+																config: { models: JSON.stringify(models) },
+															})
+														}}
+													/>
+												)}
+												{/* Generic config fields for providers with extra config (excluding azure which has custom UI) */}
+												{p.configFields && p.id !== 'azure' && (
+													<ProviderConfigFields
+														provider={p.id}
+														fields={p.configFields}
+														onStatusChange={setSaveStatus}
+													/>
+												)}
+											</Field.Root>
+										)
+									})}
+								</VStack>
 							)
 						})}
 					</VStack>

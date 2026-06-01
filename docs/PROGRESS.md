@@ -49,6 +49,7 @@ Key decisions and non-obvious changes for agent context. Architecture details ar
 - [x] Phase 2 CI/CD: GitHub Actions lint/test + release workflows.
 - [x] Electrobun updater: release.baseUrl configured for GitHub Releases.
 - [x] Results tags & favorites: updateRun RPC, star toggle, tags input, list columns, sort.
+- [x] Provider expansion: 7→22 providers via Vercel AI SDK (primary, inference, cloud, community).
 
 ## Open
 

@@ -29,22 +29,16 @@ import {
 	LuThermometer,
 } from 'react-icons/lu'
 import { SiAnthropic, SiGoogle, SiMistralai, SiOpenai } from 'react-icons/si'
-import { useListModels } from '../hooks/use-configs'
+import { PROVIDER_META } from '../../shared/provider-meta'
+import { useListModels, useProviderStatus } from '../hooks/use-configs'
 import type { TrialRow } from '../pages/EvaluationEditor'
 import { Tooltip } from './ui/tooltip'
 
 // ---- Collections ----
 
+/** Full list for fallback / export use */
 export const providerOptions = createListCollection({
-	items: [
-		{ label: 'OpenAI', value: 'openai' },
-		{ label: 'Anthropic', value: 'anthropic' },
-		{ label: 'Google', value: 'google' },
-		{ label: 'Azure OpenAI', value: 'azure' },
-		{ label: 'xAI', value: 'xai' },
-		{ label: 'Mistral', value: 'mistral' },
-		{ label: 'Groq', value: 'groq' },
-	],
+	items: PROVIDER_META.map((p) => ({ label: p.name, value: p.id })),
 })
 
 const reasoningOptions = createListCollection({
@@ -276,10 +270,12 @@ function ModelCellPopover({
 	trial,
 	idx,
 	onUpdate,
+	configuredProviders,
 }: {
 	trial: TrialRow
 	idx: number
 	onUpdate: (idx: number, field: keyof TrialRow, value: unknown) => void
+	configuredProviders: ReturnType<typeof createListCollection<{ label: string; value: string }>>
 }) {
 	return (
 		<Popover.Root>
@@ -300,7 +296,7 @@ function ModelCellPopover({
 								<Field.Root>
 									<Field.Label fontSize="xs">Provider</Field.Label>
 									<Select.Root
-										collection={providerOptions}
+										collection={configuredProviders}
 										size="sm"
 										value={[trial.provider]}
 										onValueChange={(e) => onUpdate(idx, 'provider', e.value[0])}
@@ -317,7 +313,7 @@ function ModelCellPopover({
 										<Portal>
 											<Select.Positioner>
 												<Select.Content>
-													{providerOptions.items.map((item) => (
+													{configuredProviders.items.map((item) => (
 														<Select.Item item={item} key={item.value}>
 															{item.label}
 															<Select.ItemIndicator />
@@ -672,6 +668,28 @@ export default function TrialMatrixTable({
 }) {
 	const [sortField, setSortField] = useState<SortField>('none')
 
+	const { data: providerStatus } = useProviderStatus()
+
+	const configuredProviders = useMemo(() => {
+		const configuredSet = new Set<string>()
+		if (Array.isArray(providerStatus)) {
+			for (const ps of providerStatus) {
+				if (ps.isSet) configuredSet.add(ps.provider)
+			}
+		}
+		// Always include keyless providers
+		for (const p of PROVIDER_META) {
+			if (!p.requiresKey) configuredSet.add(p.id)
+		}
+		const items = PROVIDER_META.filter((p) => configuredSet.has(p.id)).map((p) => ({
+			label: p.name,
+			value: p.id,
+		}))
+		// Fallback: if nothing configured, show all
+		if (items.length === 0) return providerOptions
+		return createListCollection({ items })
+	}, [providerStatus])
+
 	const sortedIndices = useMemo(() => {
 		const indices = trials.map((_, i) => i)
 		if (sortField === 'none') return indices
@@ -794,7 +812,12 @@ export default function TrialMatrixTable({
 									</Checkbox.Root>
 								</Table.Cell>
 								<Table.Cell {...getMatchStyle(origIdx, 'model')}>
-									<ModelCellPopover trial={trial} idx={origIdx} onUpdate={onUpdate} />
+									<ModelCellPopover
+										trial={trial}
+										idx={origIdx}
+										onUpdate={onUpdate}
+										configuredProviders={configuredProviders}
+									/>
 								</Table.Cell>
 								<Table.Cell {...getMatchStyle(origIdx, 'inference')}>
 									<InferenceCellPopover trial={trial} idx={origIdx} onUpdate={onUpdate} />

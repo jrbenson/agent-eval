@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { FiMoreVertical, FiPlay, FiPlus, FiSave, FiZap } from 'react-icons/fi'
 import type { StoredRunRecord } from '../../shared/rpc-types'
 import type { ReasoningEffort } from '../../shared/schemas/agent-config.schema'
+import type { Provider } from '../../shared/schemas/agent-config.schema'
 import ApplyToOthersDialog from '../components/ApplyToOthersDialog'
 import type { TrialField } from '../components/ApplyToOthersDialog'
 import ClickableRow from '../components/ClickableRow'
@@ -52,7 +53,7 @@ import { generateDefaultName } from '../utils/default-name'
 // ---- Types ----
 
 export interface TrialRow {
-	provider: 'openai' | 'anthropic' | 'google' | 'mistral' | 'groq' | 'xai' | 'azure'
+	provider: Provider
 	model: string
 	temperature: number
 	repetitions: number

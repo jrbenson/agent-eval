@@ -8,6 +8,24 @@ export const ProviderSchema = z.enum([
 	'groq',
 	'xai',
 	'azure',
+	// Tier 1 — simple API-key providers
+	'deepseek',
+	'fireworks',
+	'togetherai',
+	'cohere',
+	'cerebras',
+	'deepinfra',
+	'moonshotai',
+	'alibaba',
+	'huggingface',
+	'baseten',
+	// Tier 2 — cloud platforms with extra config
+	'amazon-bedrock',
+	'google-vertex',
+	// Tier 3 — community / aggregators
+	'openrouter',
+	'ollama',
+	'openai-compatible',
 ])
 
 export const ToolSearchHintsSchema = z.enum(['none', 'names_only', 'names_and_descriptions'])

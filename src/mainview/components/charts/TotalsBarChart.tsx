@@ -47,6 +47,7 @@ function buildOption(
 			axisLabel: {
 				color: colors.axisLabel,
 				fontSize: 10,
+				width: 140,
 				overflow: 'truncate' as const,
 				ellipsis: '...',
 			},
